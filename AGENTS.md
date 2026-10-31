@@ -2,11 +2,11 @@
 
 ## 项目结构
 
-本仓库开发面向 Apple Silicon、macOS 15.6、PyCharm Professional 2024.1.7 的图片链接预览插件。Java 17 源码位于 `src/main/java/`，测试位于 `src/test/java/`，插件清单位于 `src/main/resources/META-INF/plugin.xml`，设计说明位于 `docs/`。不要提交构建产物和本机 IDE 配置。
+本仓库开发面向 Apple Silicon、macOS 15.6、PyCharm Professional 2024.1.7 的图片链接预览插件。Java 17 源码位于 `src/main/java/`，JUnit 4 测试位于 `src/test/java/`，插件清单位于 `src/main/resources/META-INF/plugin.xml`，设计与命令说明位于 `docs/`。不要提交构建产物和本机 IDE 配置。
 
 ## 构建、测试与本地运行
 
-目标 IDE 固定为构建号 `PY-241.19416.19`，Java 字节码目标为 17。Gradle 9.8.1 使用 JDK 21 编译器配合 `--release 17`：`gradle test` 运行单元测试，`gradle runIde` 启动插件沙盒，`gradle buildPlugin` 打包插件。执行时将 `JAVA_HOME` 指向 PyCharm 自带的 JBR 17；详细命令见 `README.md`。
+目标 IDE 固定为构建号 `PY-241.19416.19`，Java 字节码目标为 17。将 `JAVA_HOME` 指向 JDK 21，使用仓库的 Gradle 9.8.1 Wrapper：`./gradlew test` 运行测试，`./gradlew buildPlugin` 打包插件，`./gradlew runIde` 启动沙盒。可设置 `PYCHARM_HOME` 使用本机 PyCharm；详细命令和产物路径见 `docs/构建与测试命令.md`。
 
 ## 代码风格与命名
 
@@ -14,8 +14,8 @@ Java 使用 4 个空格缩进，不混用制表符；类名使用大驼峰式，
 
 ## 测试要求
 
-为新功能和缺陷修复补充针对性测试，重点覆盖动作触发、项目上下文、文件处理和异常路径。测试文件放在 `src/test/` 下，并遵循所选测试框架的发现规则。涉及 PyCharm 界面或编辑器交互的改动，应在插件沙盒中手动验证，并在拉取请求中记录验证步骤。目前没有覆盖率门槛。
+为新功能和缺陷修复补充针对性测试，测试类以 `Test.java` 结尾，例如 `ImageLoaderTest.java`。重点覆盖链接识别、图片内容校验、资源限制和失败路径。涉及编辑器交互的改动，应在目标 PyCharm 中手动验证，并在拉取请求中记录结果。目前没有覆盖率门槛。
 
 ## 提交与拉取请求
 
-仓库尚无提交历史，因此没有既定的提交格式。提交标题请简短、明确地说明改动，例如“添加文件类型识别功能”。拉取请求应说明改动目的、主要行为、测试结果及关联问题；界面变化请附截图，兼容性或配置变化请写明验证过的 PyCharm 版本。
+现有提交标题很短，尚未形成固定格式。后续请使用简短、明确的标题，例如“修复 CDN 图片响应类型误判”。拉取请求应说明改动、测试结果及关联问题；界面变化附截图，兼容性变化写明验证过的 PyCharm 版本。完整步骤见 `CONTRIBUTING.md`。本项目采用 MIT 许可证。

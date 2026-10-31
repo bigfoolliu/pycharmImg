@@ -36,7 +36,7 @@ src/main/resources/META-INF/plugin.xml
 src/test/java/                   # 自动化测试
 ```
 
-首版已建立编辑器悬停预览工程。使用 `gradle runIde` 启动隔离的 PyCharm 开发实例，使用 `gradle test` 运行测试，使用 `gradle buildPlugin` 生成插件包。交付前，应在实际的 macOS PyCharm Professional 2024.1.7 上安装验证。[Gradle 任务说明](https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html) · [兼容性验证](https://plugins.jetbrains.com/docs/intellij/verifying-plugin-compatibility.html)
+首版已建立编辑器悬停预览工程。使用 `./gradlew runIde` 启动隔离的 PyCharm 开发实例，使用 `./gradlew test` 运行测试，使用 `./gradlew buildPlugin` 生成插件包。交付前，应在实际的 macOS PyCharm Professional 2024.1.7 上安装验证。逐条命令见[构建与测试命令](构建与测试命令.md)。[Gradle 任务说明](https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html) · [兼容性验证](https://plugins.jetbrains.com/docs/intellij/verifying-plugin-compatibility.html)
 
 ## macOS 专项检查
 
@@ -44,4 +44,4 @@ src/test/java/                   # 自动化测试
 - 检查菜单位置、`⌘` 快捷键、文件选择、系统权限与深色模式下的表现。避免把个人机器的绝对路径写进代码。
 - 仅面向 macOS 使用时，仍应在真实 macOS 环境完成沙盒测试；若无需调用系统专属 API，插件主体可以保持跨平台实现。
 
-工程以 PyCharm Professional 2024.1.7 的本机安装作为开发 SDK，并以 `PY-241.19416.19` 为首版验证目标。具体运行方式见项目根目录 `README.md`。
+工程默认获取 PyCharm Professional 2024.1.7 作为开发 SDK；可设置 `PYCHARM_HOME=/Applications/PyCharm.app` 使用本机安装。首版验证目标为 `PY-241.19416.19`。具体运行方式见项目根目录 `README.md`。

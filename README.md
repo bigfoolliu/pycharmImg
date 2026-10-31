@@ -1,24 +1,31 @@
-# 图片链接预览插件
+# Image Link Preview
 
-面向 Apple Silicon、macOS 15.6、PyCharm Professional 2024.1.7（`PY-241.19416.19`）的轻量插件。在文本编辑器中将鼠标停留在 HTTP(S) 图片链接上约 400 毫秒，即可在链接附近查看缩放预览。首版支持 PNG、JPEG 和 GIF 静态首帧；图片仅在悬停时按需请求。
+一个轻量的 PyCharm 图片链接预览插件。在文本编辑器中将鼠标停留在 HTTP(S) 图片链接上约 400 毫秒，即可在链接附近查看缩放预览。插件只在悬停时请求图片，不扫描项目或修改文件。
 
-## 环境与命令
+## 功能与兼容性
 
-需要 Gradle 9.8.1 和 Homebrew 安装的 JDK 21（`/opt/homebrew/opt/openjdk@21`）。项目使用本机 `/Applications/PyCharm.app` 作为开发 SDK；Gradle 用 JDK 21 的编译器和 `--release 17` 生成可在目标 PyCharm 运行的 Java 17 字节码。运行前设置：
+- 支持实际可解码的 PNG、JPEG 和 GIF；GIF 显示静态首帧。图片判断以内容为准，不依赖 URL 后缀或服务器声明的类型。
+- 对下载量、图像尺寸和请求时间设限；离开链接、编辑文件或切换文件后丢弃过期预览。
+- 首版仅验证 **Apple Silicon、macOS 15.6、PyCharm Professional 2024.1.7**（构建号 `PY-241.19416.19`）。不支持本地路径、需要登录的图片、SVG 或 WebP。
+
+## 构建与安装
+
+构建需要 **JDK 21**；Gradle Wrapper 固定 Gradle 9.8.1，并用 `--release 17` 生成目标 PyCharm 所需的 Java 17 字节码。默认下载 PyCharm 2024.1.7 开发 SDK；若本机已安装该版本，可设置 `PYCHARM_HOME` 使用本地文件。
 
 ```bash
-export JAVA_HOME=/Applications/PyCharm.app/Contents/jbr/Contents/Home
-gradle test
-gradle runIde
-gradle buildPlugin
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21
+export PYCHARM_HOME=/Applications/PyCharm.app  # 可选：使用本机 PyCharm 2024.1.7
+./gradlew test buildPlugin --no-daemon
 ```
 
-`runIde` 启动独立的 PyCharm 沙盒；`buildPlugin` 在 `build/distributions/` 生成插件 ZIP。首次运行需要下载 Gradle 插件和测试依赖。若需在另一台机器开发，请确认目标 PyCharm 和 JDK 21 的安装路径，随后调整 `build.gradle.kts` 中的 `local(...)` 及 `gradle.properties` 中的 JDK 路径。
+插件包位于 `build/distributions/pycharm-image-link-preview-0.1.1.zip`。在已安装的 PyCharm 中打开“设置 → 插件 → 齿轮菜单 → 从磁盘安装插件”，选择 ZIP 并按提示重启。也可运行 `./gradlew runIde --no-daemon` 启动独立沙盒；该实例可能需要单独激活。
 
-若沙盒实例要求单独激活，可直接在已激活的 PyCharm 2024.1.7 中测试：打开“设置”→“插件”→齿轮菜单→“从磁盘安装插件”，选择 `build/distributions/pycharm-image-link-preview-0.1.1.zip`，按提示重启。之后在文本文件中悬停一个可访问的 PNG、JPEG 或 GIF 链接。测试结束可在“已安装”页禁用或卸载该插件。每次修改源码后须重新运行 `gradle buildPlugin` 并安装新 ZIP。
+详细的环境说明、逐条命令注释、测试报告位置和图片诊断方法见[构建与测试命令](docs/构建与测试命令.md)。
 
-## 首版边界
+## 文档与贡献
 
-插件仅检查鼠标所在行的单个链接，不扫描整个项目。普通网页、损坏图片或超限响应不会显示预览。网络与解码在后台进行，编辑文件、切换标签或离开链接会取消过期预览。不支持本地路径、登录态图片、SVG 或 WebP。
+- [技术规范与总体架构](docs/图片链接预览插件技术规范与总体架构.md)
+- [PyCharm 插件开发技术入门](docs/PyCharm插件开发技术入门.md)
+- [贡献指南](CONTRIBUTING.md)
 
-功能和验收要求见[技术规范与总体架构](docs/图片链接预览插件技术规范与总体架构.md)。
+本项目采用 [MIT 许可证](LICENSE)。

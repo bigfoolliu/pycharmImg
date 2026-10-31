@@ -6,6 +6,9 @@ plugins {
 group = "dev.pycharmimg"
 version = "0.1.1"
 
+val pycharmHome = providers.gradleProperty("pycharmHome")
+    .orElse(providers.environmentVariable("PYCHARM_HOME"))
+
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
@@ -21,7 +24,11 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        local("/Applications/PyCharm.app")
+        if (pycharmHome.isPresent) {
+            local(pycharmHome.get())
+        } else {
+            pycharmProfessional("2024.1.7")
+        }
     }
     testImplementation("junit:junit:4.13.2")
 }

@@ -1,0 +1,11 @@
+<idea-plugin>
+    <id>dev.pycharmimg.image-link-preview</id>
+    <name>Image Link Preview</name>
+    <vendor>pycharmImg</vendor>
+    <description>在编辑器中悬停预览图片链接。</description>
+    <depends>com.intellij.modules.python</depends>
+    <extensions defaultExtensionNs="com.intellij">
+        <editorFactoryMouseMotionListener implementation="dev.pycharmimg.preview.ImagePreviewMouseListener"/>
+        <editorFactoryMouseListener implementation="dev.pycharmimg.preview.ImagePreviewMouseListener"/>
+    </extensions>
+</idea-plugin>

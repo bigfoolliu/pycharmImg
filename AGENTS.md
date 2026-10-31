@@ -2,15 +2,15 @@
 
 ## 项目结构
 
-本仓库用于开发面向 Apple Silicon、macOS 15.6、PyCharm Professional 2024.1.7 的图片链接预览插件，目前尚未建立源码目录或构建配置。初始化项目时，建议将 Kotlin 代码放在 `src/main/kotlin/`，将资源与 `META-INF/plugin.xml` 放在 `src/main/resources/`，将测试放在 `src/test/kotlin/`。设计说明位于 `docs/`。不要提交构建产物和本机 IDE 配置。
+本仓库开发面向 Apple Silicon、macOS 15.6、PyCharm Professional 2024.1.7 的图片链接预览插件。Java 17 源码位于 `src/main/java/`，测试位于 `src/test/java/`，插件清单位于 `src/main/resources/META-INF/plugin.xml`，设计说明位于 `docs/`。不要提交构建产物和本机 IDE 配置。
 
 ## 构建、测试与本地运行
 
-当前没有可执行的构建或测试命令。建立工程时，目标 IDE 固定为构建号 `PY-241.19416.19`，Java 字节码目标为 17，并在 `README.md` 中写明所用 Gradle 版本。常见任务包括 `./gradlew runIde`（启动插件沙盒）、`./gradlew test`（运行测试）和 `./gradlew buildPlugin`（打包插件）；提交前应先确认这些任务已正确配置并能运行。
+目标 IDE 固定为构建号 `PY-241.19416.19`，Java 字节码目标为 17。Gradle 9.8.1 使用 JDK 21 编译器配合 `--release 17`：`gradle test` 运行单元测试，`gradle runIde` 启动插件沙盒，`gradle buildPlugin` 打包插件。执行时将 `JAVA_HOME` 指向 PyCharm 自带的 JBR 17；详细命令见 `README.md`。
 
 ## 代码风格与命名
 
-遵循项目最终选用的 Kotlin 或 Java 格式化规则，并将规则配置提交到仓库。统一缩进，避免在同一文件混用制表符和空格。类名使用大驼峰式，方法和变量使用小驼峰式；扩展点、动作及服务的名称应体现功能。修改 `plugin.xml` 时，同步检查类名、扩展点声明和插件兼容范围。
+Java 使用 4 个空格缩进，不混用制表符；类名使用大驼峰式，方法和变量使用小驼峰式。保持编辑器监听、链接识别、图片加载和弹窗职责清晰。修改 `plugin.xml` 时，同步检查类名、扩展点声明和插件兼容范围。
 
 ## 测试要求
 

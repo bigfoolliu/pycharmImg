@@ -74,7 +74,12 @@ public final class ImagePreviewService implements Disposable {
         }
         int line = document.getLineNumber(offset);
         int start = document.getLineStartOffset(line);
-        String text = document.getText(new TextRange(start, document.getLineEndOffset(line)));
+        int end = document.getLineEndOffset(line);
+        if (end - start > ImageLinkDetector.MAX_LINE_LENGTH) {
+            clear();
+            return;
+        }
+        String text = document.getText(new TextRange(start, end));
         ImageLinkDetector.Link link = ImageLinkDetector.at(text, offset - start);
         if (link == null) {
             clear();

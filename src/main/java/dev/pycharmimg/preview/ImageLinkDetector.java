@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 final class ImageLinkDetector {
     private static final Pattern URL = Pattern.compile("https?://[^\\s\\\"'<>]+", Pattern.CASE_INSENSITIVE);
     private static final String TRAILING = ".,;:!?)]}";
-    private static final int MAX_LINE_LENGTH = 8192;
+    static final int MAX_LINE_LENGTH = 8192;
 
     private ImageLinkDetector() {
     }

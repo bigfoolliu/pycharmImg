@@ -28,6 +28,25 @@ public class ImageLinkDetectorTest {
     }
 
     @Test
+    public void preservesBalancedParenthesesInsideUrls() {
+        String plain = "https://example.com/image_(final)";
+        assertEquals(plain, ImageLinkDetector.at(plain, plain.indexOf("image")).url());
+
+        String markdown = "![alt](https://example.com/image_(final))";
+        assertEquals(plain, ImageLinkDetector.at(markdown, markdown.indexOf("image")).url());
+    }
+
+    @Test
+    public void trimsOnlyAnOuterClosingParenthesis() {
+        String wrapped = "See (https://example.com/image.png).";
+        assertEquals("https://example.com/image.png",
+                ImageLinkDetector.at(wrapped, wrapped.indexOf("image")).url());
+
+        String plain = "https://example.com/image)";
+        assertEquals(plain, ImageLinkDetector.at(plain, plain.indexOf("image")).url());
+    }
+
+    @Test
     public void rejectsCredentialsAndVeryLongLines() {
         String line = "https://user:secret@example.com/image.png";
         assertNull(ImageLinkDetector.at(line, line.indexOf("image")));

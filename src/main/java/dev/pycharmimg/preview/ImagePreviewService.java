@@ -35,9 +35,11 @@ public final class ImagePreviewService implements Disposable {
     private long generation;
     private RelativePoint anchor;
     private Future<?> task;
+    private ImageLoader.Request request;
     private JBPopup popup;
 
     private final ImageLoader loader = new ImageLoader();
+    private final ImageRequestExecutor requests = new ImageRequestExecutor();
     private final Timer hoverDelay = new Timer(400, event -> requestImage());
     private final DocumentListener documentListener = new DocumentListener() {
         @Override
@@ -114,10 +116,12 @@ public final class ImagePreviewService implements Disposable {
             showImage(requestGeneration, cached);
             return;
         }
-        task = ApplicationManager.getApplication().executeOnPooledThread(() -> {
+        request = new ImageLoader.Request();
+        ImageLoader.Request currentRequest = request;
+        task = requests.submit(() -> {
             BufferedImage image;
             try {
-                image = loader.load(url);
+                image = loader.load(url, currentRequest);
             } catch (IOException | IllegalArgumentException ignored) {
                 image = null;
             }
@@ -125,6 +129,7 @@ public final class ImagePreviewService implements Disposable {
             ApplicationManager.getApplication().invokeLater(() -> {
                 if (requestGeneration == generation) {
                     task = null;
+                    request = null;
                     if (result != null) {
                         showImage(requestGeneration, result);
                     }
@@ -161,8 +166,10 @@ public final class ImagePreviewService implements Disposable {
         hoverDelay.stop();
         generation++;
         if (task != null) {
-            task.cancel(true);
+            request.cancel();
+            requests.cancel(task);
             task = null;
+            request = null;
         }
         if (activeEditor != null) {
             activeEditor.getDocument().removeDocumentListener(documentListener);
@@ -181,8 +188,12 @@ public final class ImagePreviewService implements Disposable {
     public void dispose() {
         if (SwingUtilities.isEventDispatchThread()) {
             clear();
+            requests.close();
         } else {
-            SwingUtilities.invokeLater(this::clear);
+            SwingUtilities.invokeLater(() -> {
+                clear();
+                requests.close();
+            });
         }
     }
 }

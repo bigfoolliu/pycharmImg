@@ -14,6 +14,11 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
@@ -30,9 +35,51 @@ final class ImageLoader {
     private static final int MAX_WIDTH = 480;
     private static final int MAX_HEIGHT = 320;
     private static final int MAX_REDIRECTS = 3;
-    private static final long TIMEOUT_NANOS = 5_000_000_000L;
+    private static final long DEFAULT_TIMEOUT_MILLIS = 5000;
+    private static final ScheduledThreadPoolExecutor TIMEOUTS = new ScheduledThreadPoolExecutor(1, runnable -> {
+        Thread thread = new Thread(runnable, "pycharm-image-preview-timeout");
+        thread.setDaemon(true);
+        return thread;
+    });
+
+    static {
+        TIMEOUTS.setRemoveOnCancelPolicy(true);
+    }
 
     private final ConnectionFactory connectionFactory;
+    private final long timeoutMillis;
+
+    static final class Request {
+        private final AtomicBoolean cancelled = new AtomicBoolean();
+        private final AtomicReference<HttpURLConnection> connection = new AtomicReference<>();
+
+        void cancel() {
+            cancelled.set(true);
+            HttpURLConnection current = connection.getAndSet(null);
+            if (current != null) {
+                current.disconnect();
+            }
+        }
+
+        void check() throws IOException {
+            if (cancelled.get() || Thread.currentThread().isInterrupted()) {
+                throw new IOException("Image request cancelled or timed out");
+            }
+        }
+
+        void bind(HttpURLConnection current) throws IOException {
+            check();
+            connection.set(current);
+            if (cancelled.get()) {
+                cancel();
+                throw new IOException("Image request cancelled or timed out");
+            }
+        }
+
+        void unbind(HttpURLConnection current) {
+            connection.compareAndSet(current, null);
+        }
+    }
 
     private final Map<String, BufferedImage> cache = new LinkedHashMap<>(16, .75f, true) {
         @Override
@@ -42,11 +89,19 @@ final class ImageLoader {
     };
 
     ImageLoader() {
-        this(url -> (HttpURLConnection) url.openConnection());
+        this(url -> (HttpURLConnection) url.openConnection(), DEFAULT_TIMEOUT_MILLIS);
     }
 
     ImageLoader(ConnectionFactory connectionFactory) {
+        this(connectionFactory, DEFAULT_TIMEOUT_MILLIS);
+    }
+
+    ImageLoader(ConnectionFactory connectionFactory, long timeoutMillis) {
+        if (timeoutMillis <= 0) {
+            throw new IllegalArgumentException("Timeout must be positive");
+        }
         this.connectionFactory = connectionFactory;
+        this.timeoutMillis = timeoutMillis;
     }
 
     synchronized BufferedImage cached(String url) {
@@ -54,49 +109,66 @@ final class ImageLoader {
     }
 
     BufferedImage load(String url) throws IOException {
+        return load(url, new Request());
+    }
+
+    BufferedImage load(String url, Request request) throws IOException {
+        request.check();
         BufferedImage existing = cached(url);
         if (existing != null) {
             return existing;
         }
-        long deadline = System.nanoTime() + TIMEOUT_NANOS;
-        URI current = URI.create(url);
-        for (int redirect = 0; redirect <= MAX_REDIRECTS; redirect++) {
-            if (!isHttpUrl(current)) {
-                throw new IOException("Unsupported URL");
-            }
-            HttpURLConnection connection = connectionFactory.open(new URL(current.toString()));
-            connection.setInstanceFollowRedirects(false);
-            connection.setConnectTimeout(remainingMillis(deadline));
-            connection.setReadTimeout(remainingMillis(deadline));
-            connection.setRequestProperty("Accept", "image/png,image/jpeg,image/gif");
-            try {
-                int status = connection.getResponseCode();
-                if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
-                    String location = connection.getHeaderField("Location");
-                    if (location == null || redirect == MAX_REDIRECTS) {
-                        throw new IOException("Too many redirects");
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        ScheduledFuture<?> timeout = TIMEOUTS.schedule(request::cancel, timeoutMillis, TimeUnit.MILLISECONDS);
+        try {
+            URI current = URI.create(url);
+            for (int redirect = 0; redirect <= MAX_REDIRECTS; redirect++) {
+                request.check();
+                if (!isHttpUrl(current)) {
+                    throw new IOException("Unsupported URL");
+                }
+                remainingMillis(deadline, request);
+                HttpURLConnection connection = connectionFactory.open(new URL(current.toString()));
+                try {
+                    request.bind(connection);
+                    connection.setInstanceFollowRedirects(false);
+                    connection.setConnectTimeout(remainingMillis(deadline, request));
+                    connection.setReadTimeout(Math.min(remainingMillis(deadline, request), 1000));
+                    connection.setRequestProperty("Accept", "image/png,image/jpeg,image/gif");
+                    int status = connection.getResponseCode();
+                    remainingMillis(deadline, request);
+                    if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
+                        String location = connection.getHeaderField("Location");
+                        if (location == null || redirect == MAX_REDIRECTS) {
+                            throw new IOException("Too many redirects");
+                        }
+                        current = current.resolve(location);
+                        continue;
                     }
-                    current = current.resolve(location);
-                    continue;
+                    if (status < 200 || status >= 300) {
+                        throw new IOException("HTTP " + status);
+                    }
+                    // CDN metadata can be generic or wrong; enforce limits on bytes actually read.
+                    byte[] bytes;
+                    try (InputStream input = connection.getInputStream()) {
+                        bytes = readLimited(input, deadline, request);
+                    }
+                    request.check();
+                    BufferedImage image = decode(bytes);
+                    remainingMillis(deadline, request);
+                    synchronized (this) {
+                        cache.put(url, image);
+                    }
+                    return image;
+                } finally {
+                    request.unbind(connection);
+                    connection.disconnect();
                 }
-                if (status < 200 || status >= 300) {
-                    throw new IOException("HTTP " + status);
-                }
-                // CDN metadata can be generic or wrong; enforce limits on bytes actually read.
-                byte[] bytes;
-                try (InputStream input = connection.getInputStream()) {
-                    bytes = readLimited(input, deadline);
-                }
-                BufferedImage image = decode(bytes);
-                synchronized (this) {
-                    cache.put(url, image);
-                }
-                return image;
-            } finally {
-                connection.disconnect();
             }
+            throw new IOException("Too many redirects");
+        } finally {
+            timeout.cancel(false);
         }
-        throw new IOException("Too many redirects");
     }
 
     private static boolean isHttpUrl(URI uri) {
@@ -105,20 +177,26 @@ final class ImageLoader {
                 && uri.getHost() != null && uri.getUserInfo() == null;
     }
 
-    private static int remainingMillis(long deadline) throws IOException {
+    private static int remainingMillis(long deadline, Request request) throws IOException {
+        request.check();
         long remaining = (deadline - System.nanoTime()) / 1_000_000L;
-        if (remaining <= 0 || Thread.currentThread().isInterrupted()) {
+        if (remaining <= 0) {
             throw new IOException("Image request timed out");
         }
         return (int) Math.min(remaining, 5000);
     }
 
-    private static byte[] readLimited(InputStream input, long deadline) throws IOException {
+    private static byte[] readLimited(InputStream input, long deadline, Request request) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
         int count;
-        while ((count = input.read(buffer)) != -1) {
-            remainingMillis(deadline);
+        while (true) {
+            remainingMillis(deadline, request);
+            count = input.read(buffer);
+            remainingMillis(deadline, request);
+            if (count == -1) {
+                break;
+            }
             if (output.size() + count > MAX_BYTES) {
                 throw new IOException("Image is too large");
             }

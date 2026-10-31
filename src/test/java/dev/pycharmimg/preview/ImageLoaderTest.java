@@ -55,6 +55,18 @@ public class ImageLoaderTest {
     }
 
     @Test
+    public void previewsLargeImagesAtExpectedSize() throws IOException {
+        BufferedImage source = new BufferedImage(1600, 1600, BufferedImage.TYPE_INT_RGB);
+        for (String format : new String[] {"png", "jpeg", "gif"}) {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            assertTrue(ImageIO.write(source, format, bytes));
+            BufferedImage preview = ImageLoader.decode(bytes.toByteArray());
+            assertEquals(format, 320, preview.getWidth());
+            assertEquals(format, 320, preview.getHeight());
+        }
+    }
+
+    @Test
     public void rejectsResponsesOverFiveMebibytes() {
         assertThrows(IOException.class, () -> ImageLoader.decode(new byte[5 * 1024 * 1024 + 1]));
     }

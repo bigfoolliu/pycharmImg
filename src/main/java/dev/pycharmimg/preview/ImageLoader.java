@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.MemoryCacheImageInputStream;
@@ -32,6 +33,7 @@ final class ImageLoader {
 
     private static final int MAX_BYTES = 5 * 1024 * 1024;
     private static final int MAX_SIDE = 4096;
+    private static final int MAX_DECODED_PIXELS = 2_000_000;
     private static final int MAX_WIDTH = 480;
     private static final int MAX_HEIGHT = 320;
     private static final int MAX_REDIRECTS = 3;
@@ -226,13 +228,22 @@ final class ImageLoader {
                 if (width < 1 || height < 1 || width > MAX_SIDE || height > MAX_SIDE) {
                     throw new IOException("Image dimensions are too large");
                 }
-                BufferedImage image = reader.read(0);
-                double scale = Math.min(1.0, Math.min((double) MAX_WIDTH / width, (double) MAX_HEIGHT / height));
-                if (scale == 1.0) {
-                    return image;
+                int subsampling = 1;
+                while ((long) ((width + subsampling - 1) / subsampling)
+                        * ((height + subsampling - 1) / subsampling) > MAX_DECODED_PIXELS) {
+                    subsampling++;
                 }
+                ImageReadParam parameters = reader.getDefaultReadParam();
+                if (subsampling > 1) {
+                    parameters.setSourceSubsampling(subsampling, subsampling, 0, 0);
+                }
+                BufferedImage image = reader.read(0, parameters);
+                double scale = Math.min(1.0, Math.min((double) MAX_WIDTH / width, (double) MAX_HEIGHT / height));
                 int targetWidth = Math.max(1, (int) Math.round(width * scale));
                 int targetHeight = Math.max(1, (int) Math.round(height * scale));
+                if (image.getWidth() == targetWidth && image.getHeight() == targetHeight) {
+                    return image;
+                }
                 BufferedImage scaled = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
                 Graphics2D graphics = scaled.createGraphics();
                 try {

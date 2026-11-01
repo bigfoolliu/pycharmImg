@@ -25,6 +25,7 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.MemoryCacheImageInputStream;
 
+/** 限量下载并解码图片，缓存可复用的预览图。 */
 final class ImageLoader {
     @FunctionalInterface
     interface ConnectionFactory {
@@ -51,6 +52,7 @@ final class ImageLoader {
     private final ConnectionFactory connectionFactory;
     private final long timeoutMillis;
 
+    /** 跟踪当前连接，使悬停取消和超时都能主动断开请求。 */
     static final class Request {
         private final AtomicBoolean cancelled = new AtomicBoolean();
         private final AtomicReference<HttpURLConnection> connection = new AtomicReference<>();
@@ -72,6 +74,7 @@ final class ImageLoader {
         void bind(HttpURLConnection current) throws IOException {
             check();
             connection.set(current);
+            // 覆盖“检查取消”与“绑定连接”之间发生的取消。
             if (cancelled.get()) {
                 cancel();
                 throw new IOException("Image request cancelled or timed out");
@@ -114,6 +117,7 @@ final class ImageLoader {
         return load(url, new Request());
     }
 
+    /** 使用同一截止时间约束重定向与读取，并在写入缓存前检查请求状态。 */
     BufferedImage load(String url, Request request) throws IOException {
         request.check();
         BufferedImage existing = cached(url);
@@ -150,7 +154,7 @@ final class ImageLoader {
                     if (status < 200 || status >= 300) {
                         throw new IOException("HTTP " + status);
                     }
-                    // CDN metadata can be generic or wrong; enforce limits on bytes actually read.
+                    // CDN 响应头可能不准确，以实际读取字节数限制下载量。
                     byte[] bytes;
                     try (InputStream input = connection.getInputStream()) {
                         bytes = readLimited(input, deadline, request);
@@ -207,6 +211,7 @@ final class ImageLoader {
         return output.toByteArray();
     }
 
+    /** 校验格式与尺寸后读取首帧，并缩放到弹窗尺寸。 */
     static BufferedImage decode(byte[] bytes) throws IOException {
         if (bytes.length > MAX_BYTES) {
             throw new IOException("Image is too large");
@@ -228,6 +233,7 @@ final class ImageLoader {
                 if (width < 1 || height < 1 || width > MAX_SIDE || height > MAX_SIDE) {
                     throw new IOException("Image dimensions are too large");
                 }
+                // 在读取阶段降采样，避免为大图创建完整尺寸的解码结果。
                 int subsampling = 1;
                 while ((long) ((width + subsampling - 1) / subsampling)
                         * ((height + subsampling - 1) / subsampling) > MAX_DECODED_PIXELS) {

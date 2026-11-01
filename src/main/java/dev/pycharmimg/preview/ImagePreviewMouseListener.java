@@ -5,6 +5,7 @@ import com.intellij.openapi.editor.event.EditorMouseListener;
 import com.intellij.openapi.editor.event.EditorMouseMotionListener;
 import com.intellij.openapi.project.Project;
 
+/** 将编辑器鼠标事件转交给所属项目的预览服务。 */
 public final class ImagePreviewMouseListener implements EditorMouseMotionListener, EditorMouseListener {
     @Override
     public void mouseMoved(EditorMouseEvent event) {

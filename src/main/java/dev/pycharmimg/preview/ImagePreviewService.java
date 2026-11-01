@@ -26,12 +26,14 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
+/** 管理当前项目的悬停延时、图片请求与预览弹窗。 */
 @Service(Service.Level.PROJECT)
 public final class ImagePreviewService implements Disposable {
     private Editor activeEditor;
     private String activeUrl;
     private int activeStart;
     private long documentStamp;
+    // 状态变化时递增，用于丢弃旧请求的回调。
     private long generation;
     private RelativePoint anchor;
     private Future<?> task;
@@ -75,6 +77,7 @@ public final class ImagePreviewService implements Disposable {
         int line = document.getLineNumber(offset);
         int start = document.getLineStartOffset(line);
         int end = document.getLineEndOffset(line);
+        // 先检查长度，避免鼠标移动时复制超长行。
         if (end - start > ImageLinkDetector.MAX_LINE_LENGTH) {
             clear();
             return;
@@ -131,6 +134,7 @@ public final class ImagePreviewService implements Disposable {
                 image = null;
             }
             BufferedImage result = image;
+            // 后台只负责加载；界面更新和状态核对都回到 EDT。
             ApplicationManager.getApplication().invokeLater(() -> {
                 if (requestGeneration == generation) {
                     task = null;
@@ -168,6 +172,7 @@ public final class ImagePreviewService implements Disposable {
     }
 
     private void clear() {
+        // 同步失效旧回调，再取消请求并释放编辑器监听与弹窗。
         hoverDelay.stop();
         generation++;
         if (task != null) {

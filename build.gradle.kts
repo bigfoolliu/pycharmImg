@@ -50,4 +50,9 @@ intellijPlatform {
             untilBuild = "241.19416.19"
         }
     }
+    pluginVerification {
+        ides {
+            current()
+        }
+    }
 }

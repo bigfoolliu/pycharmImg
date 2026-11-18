@@ -1,8 +1,14 @@
 <idea-plugin>
     <id>dev.pycharmimg.image-link-preview</id>
     <name>Image Link Preview</name>
-    <vendor>pycharmImg</vendor>
-    <description>在编辑器中悬停预览图片链接。</description>
+    <vendor url="https://github.com/bigfoolliu/pycharmImg" email="liutony201425@gmail.com">Tonyliu2026</vendor>
+    <description><![CDATA[
+        <p>Preview decodable PNG, JPEG, and GIF images from HTTP(S) links by hovering over them in the editor.</p>
+        <p>A preview request starts after about 400 ms over a URL. The plugin sends an HTTP GET to the hovered URL, including its query string; URL fragments are not sent in HTTP requests. The destination server receives the request and can see your IP address. Up to three HTTP(S) redirects are followed. Localhost and private-network addresses are not blocked. Requests time out after 5 seconds and response bodies are limited to 5 MiB. Source images are limited to 4096 × 4096 pixels and previews to 480 × 320 pixels. Moving away cancels pending work. GIF previews show the first frame.</p>
+        <p>The plugin inspects only the line under the pointer. It does not scan other project files, modify files, send telemetry, or write images and URLs to disk. Decoded previews are kept in a small in-memory cache. URLs with embedded usernames or passwords are rejected, and the plugin does not provide a sign-in flow; authenticated images may not load. It does not read PyCharm passwords or explicitly set Cookie or Authorization headers, but JVM-wide cookie/authentication handlers and system proxy settings may affect HTTP connections.</p>
+        <p><strong>中文：</strong>在编辑器的 HTTP(S) 图片链接上悬停约 400 毫秒即可预览可解码的 PNG、JPEG 或 GIF（仅显示首帧）。插件会向悬停链接发送 GET 请求，包含 URL 查询参数；URL 片段不会随 HTTP 请求发送。目标服务器可看到你的 IP 地址。最多跟随 3 次 HTTP(S) 重定向，当前不会阻止 localhost 或内网地址。请求最长 5 秒、响应体最多 5 MiB，原图不超过 4096 × 4096 像素，预览不超过 480 × 320 像素；移开鼠标会取消待处理请求。插件只读取鼠标所在行，不扫描其他项目文件、不修改文件、不发送遥测数据，也不会将图片或 URL 写入磁盘；预览图只保存在有限的内存缓存中。含用户名或密码的 URL 会被拒绝；插件不提供登录流程，需认证的图片可能无法加载。插件不会读取 PyCharm 密码，也不会显式设置 Cookie 或 Authorization 请求头；JVM 全局 Cookie/认证处理器和系统代理设置仍可能影响 HTTP 连接。</p>
+    ]]></description>
+    <change-notes><![CDATA[<p>Initial release: preview remote PNG, JPEG, and GIF images by hovering over HTTP(S) links in the editor.</p>]]></change-notes>
     <depends>com.intellij.modules.python</depends>
     <extensions defaultExtensionNs="com.intellij">
         <editorFactoryMouseMotionListener implementation="dev.pycharmimg.preview.ImagePreviewMouseListener"/>

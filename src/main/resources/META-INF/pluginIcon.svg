@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <title>Image Link Preview</title>
+  <rect x="2" y="2" width="36" height="36" rx="9" fill="#211B63"/>
+  <rect x="7.5" y="7.5" width="25" height="21" rx="3.5" fill="#16C9D8"/>
+  <circle cx="25.5" cy="13.5" r="3.2" fill="#FFD34D"/>
+  <path d="M9.5 25.8 15.4 18.4a1.35 1.35 0 0 1 2.1 0l4 5 2.6-3.2a1.35 1.35 0 0 1 2.1 0l4.3 5.6H9.5Z" fill="#FFF"/>
+  <path d="M22.4 19.2v14.2l3.7-3.1 2.8 5.5 3.1-1.6-2.8-5.4 4.8-.6-11.6-9Z" fill="#FFF" stroke="#211B63" stroke-linejoin="round" stroke-width="1.35"/>
+</svg>
